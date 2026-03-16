@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to build (e.g., 3.9.5 or 4.0.0)'
+        description: "Version to build (e.g., 3.9.5 or 4.0.0)"
         required: true
         type: string
   workflow_call:
     inputs:
       version:
-        description: 'Version to build'
+        description: "Version to build"
         required: true
         type: string
 
@@ -58,6 +58,16 @@ jobs:
           path: build-repo
           fetch-depth: 1
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git git-lfs
+
       - name: Clone SPT server repository
         run: |
           git clone --depth 1 --branch ${{ inputs.version }} \
@@ -66,7 +76,6 @@ jobs:
       - name: Prepare build environment
         run: |
           mkdir -p build-output
-          mkdir -p build-temp
 
       - name: Build legacy SPT
         run: |
@@ -95,6 +104,11 @@ jobs:
           path: build-repo
           fetch-depth: 1
 
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git git-lfs curl p7zip-full
+
       - name: Clone SPT server-csharp repository
         run: |
           git clone --depth 1 --branch ${{ inputs.version }} \
@@ -103,7 +117,6 @@ jobs:
       - name: Prepare build environment
         run: |
           mkdir -p build-output
-          mkdir -p build-temp
 
       - name: Build modern C# (amd64)
         run: |
@@ -132,6 +145,11 @@ jobs:
           path: build-repo
           fetch-depth: 1
 
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git git-lfs dotnet-sdk-9.0
+
       - name: Clone SPT server-csharp repository
         run: |
           git clone --depth 1 --branch ${{ inputs.version }} \
@@ -140,7 +158,6 @@ jobs:
       - name: Prepare build environment
         run: |
           mkdir -p build-output
-          mkdir -p build-temp
 
       - name: Build modern C# (arm64)
         run: |
@@ -159,7 +176,13 @@ jobs:
 
   dispatch-release:
     name: Dispatch Release Workflow
-    needs: [determine-build-type, build-legacy, build-csharp-amd64, build-csharp-arm64]
+    needs:
+      [
+        determine-build-type,
+        build-legacy,
+        build-csharp-amd64,
+        build-csharp-arm64,
+      ]
     if: always()
     runs-on: ubuntu-latest
     permissions:
