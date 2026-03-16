@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., v4.0.0)'
+        description: 'Version to release (e.g., 4.0.0)'
         required: true
         type: string
   workflow_call:
@@ -24,7 +24,7 @@ jobs:
       - name: Validate version format
         run: |
           VERSION="${{ inputs.version }}"
-          if ! [[ $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Invalid version format: $VERSION"
             exit 1
           fi
@@ -33,7 +33,7 @@ jobs:
         id: version_type
         run: |
           VERSION="${{ inputs.version }}"
-          MAJOR=$(echo $VERSION | sed 's/v\([0-9]*\).*/\1/')
+          MAJOR=$(echo $VERSION | sed 's/\([0-9]*\).*/\1/')
           if [ "$MAJOR" -lt 4 ]; then
             echo "type=legacy" >> $GITHUB_OUTPUT
           else

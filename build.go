@@ -48,7 +48,7 @@ func parseVersion(tag string) (*Version, error) {
 }
 
 func (v *Version) String() string {
-	return fmt.Sprintf("v%d.%d.%d", v.major, v.minor, v.patch)
+	return fmt.Sprintf("%d.%d.%d", v.major, v.minor, v.patch)
 }
 
 func (v *Version) Repo() string {

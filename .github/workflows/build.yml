@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to build (e.g., v3.9.5 or v4.0.0)'
+        description: 'Version to build (e.g., 3.9.5 or 4.0.0)'
         required: true
         type: string
   workflow_call:
@@ -30,13 +30,13 @@ jobs:
           VERSION="${{ inputs.version }}"
 
           # Validate version format
-          if ! [[ $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Invalid version format: $VERSION"
             exit 1
           fi
 
           # Extract major version
-          MAJOR=$(echo $VERSION | sed 's/v\([0-9]*\).*/\1/')
+          MAJOR=$(echo $VERSION | sed 's/\([0-9]*\).*/\1/')
 
           if [ "$MAJOR" -lt 4 ]; then
             echo "build_type=legacy" >> $GITHUB_OUTPUT
