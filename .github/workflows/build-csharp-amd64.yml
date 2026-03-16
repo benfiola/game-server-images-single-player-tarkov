@@ -1,0 +1,50 @@
+name: Build Modern C# (amd64)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g., v4.0.0)'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to build'
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: Build C# amd64 ${{ inputs.version }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ inputs.version }}"
+          if ! [[ $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version format: $VERSION"
+            exit 1
+          fi
+          # Ensure it's modern (>= 4.0.0)
+          MAJOR=$(echo $VERSION | sed 's/v\([0-9]*\).*/\1/')
+          if [ "$MAJOR" -lt 4 ]; then
+            echo "Version $VERSION is legacy (< 4.0.0). Use build-legacy workflow instead."
+            exit 1
+          fi
+
+      - name: Build modern C# (amd64)
+        run: go run build.go build --version=${{ inputs.version }} --arch=amd64 --output=./dist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spt-${{ inputs.version }}-amd64
+          path: dist/
+          retention-days: 30

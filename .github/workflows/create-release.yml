@@ -1,0 +1,100 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v4.0.0)'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to release'
+        required: true
+        type: string
+
+jobs:
+  release:
+    name: Create Release ${{ inputs.version }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ inputs.version }}"
+          if ! [[ $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version format: $VERSION"
+            exit 1
+          fi
+
+      - name: Determine version type
+        id: version_type
+        run: |
+          VERSION="${{ inputs.version }}"
+          MAJOR=$(echo $VERSION | sed 's/v\([0-9]*\).*/\1/')
+          if [ "$MAJOR" -lt 4 ]; then
+            echo "type=legacy" >> $GITHUB_OUTPUT
+          else
+            echo "type=modern" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download legacy artifact
+        if: steps.version_type.outputs.type == 'legacy'
+        uses: actions/download-artifact@v4
+        with:
+          name: spt-${{ inputs.version }}-legacy
+          path: artifacts/legacy
+
+      - name: Download amd64 artifact
+        if: steps.version_type.outputs.type == 'modern'
+        uses: actions/download-artifact@v4
+        with:
+          name: spt-${{ inputs.version }}-amd64
+          path: artifacts/amd64
+
+      - name: Download arm64 artifact
+        if: steps.version_type.outputs.type == 'modern'
+        uses: actions/download-artifact@v4
+        with:
+          name: spt-${{ inputs.version }}-arm64
+          path: artifacts/arm64
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          VERSION="${{ inputs.version }}"
+          TYPE="${{ steps.version_type.outputs.type }}"
+
+          if [ "$TYPE" = "legacy" ]; then
+            NOTES="Single Player Tarkov $VERSION (Legacy - Node.js)
+
+          ## Artifacts
+          - \`spt-legacy/\` - Legacy SPT server build"
+          else
+            NOTES="Single Player Tarkov $VERSION (Modern - C#/.NET)
+
+          ## Artifacts
+          - \`amd64/\` - x86-64 architecture build
+          - \`arm64/\` - ARM64 architecture build"
+          fi
+
+          {
+            echo 'notes<<EOF'
+            echo "$NOTES"
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ inputs.version }}
+          name: Single Player Tarkov ${{ inputs.version }}
+          body: ${{ steps.release_notes.outputs.notes }}
+          artifacts: |
+            artifacts/**/*
+          allowUpdates: false
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}

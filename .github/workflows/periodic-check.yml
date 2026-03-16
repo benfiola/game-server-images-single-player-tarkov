@@ -1,0 +1,119 @@
+name: Periodic Version Check
+
+on:
+  schedule:
+    # Run daily at 00:00 UTC
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check for new versions
+    runs-on: ubuntu-latest
+    outputs:
+      legacy_version: ${{ steps.check.outputs.legacy_version }}
+      csharp_version: ${{ steps.check.outputs.csharp_version }}
+      legacy_is_new: ${{ steps.check_legacy.outputs.is_new }}
+      csharp_is_new: ${{ steps.check_csharp.outputs.is_new }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Check latest versions
+        id: check
+        run: |
+          OUTPUT=$(go run build.go check)
+          echo "Full output: $OUTPUT"
+
+          # Parse JSON output
+          LEGACY=$(echo "$OUTPUT" | jq -r '.legacy // empty')
+          CSHARP=$(echo "$OUTPUT" | jq -r '.csharp // empty')
+
+          echo "legacy_version=$LEGACY" >> $GITHUB_OUTPUT
+          echo "csharp_version=$CSHARP" >> $GITHUB_OUTPUT
+
+          echo "Parsed versions:"
+          echo "  Legacy: $LEGACY"
+          echo "  C#: $CSHARP"
+
+      - name: Check if legacy version is new
+        id: check_legacy
+        if: steps.check.outputs.legacy_version != ''
+        env:
+          VERSION: ${{ steps.check.outputs.legacy_version }}
+        run: |
+          # Check if release exists
+          if gh release view "$VERSION" --repo "${{ github.repository }}" &>/dev/null; then
+            echo "Release already exists for $VERSION"
+            echo "is_new=false" >> $GITHUB_OUTPUT
+          else
+            echo "New version detected: $VERSION"
+            echo "is_new=true" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      - name: Check if csharp version is new
+        id: check_csharp
+        if: steps.check.outputs.csharp_version != ''
+        env:
+          VERSION: ${{ steps.check.outputs.csharp_version }}
+        run: |
+          # Check if release exists
+          if gh release view "$VERSION" --repo "${{ github.repository }}" &>/dev/null; then
+            echo "Release already exists for $VERSION"
+            echo "is_new=false" >> $GITHUB_OUTPUT
+          else
+            echo "New version detected: $VERSION"
+            echo "is_new=true" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      - name: Log summary
+        run: |
+          echo "=== Version Check Summary ==="
+          echo "Legacy version: ${{ steps.check.outputs.legacy_version }}"
+          echo "  New: ${{ steps.check_legacy.outputs.is_new }}"
+          echo "C# version: ${{ steps.check.outputs.csharp_version }}"
+          echo "  New: ${{ steps.check_csharp.outputs.is_new }}"
+
+  build_legacy:
+    name: Trigger Legacy Build
+    needs: check
+    if: needs.check.outputs.legacy_is_new == 'true'
+    uses: ./.github/workflows/build-legacy.yml
+    with:
+      version: ${{ needs.check.outputs.legacy_version }}
+
+  build_csharp_amd64:
+    name: Trigger C# amd64 Build
+    needs: check
+    if: needs.check.outputs.csharp_is_new == 'true'
+    uses: ./.github/workflows/build-csharp-amd64.yml
+    with:
+      version: ${{ needs.check.outputs.csharp_version }}
+
+  build_csharp_arm64:
+    name: Trigger C# arm64 Build
+    needs: check
+    if: needs.check.outputs.csharp_is_new == 'true'
+    uses: ./.github/workflows/build-csharp-arm64.yml
+    with:
+      version: ${{ needs.check.outputs.csharp_version }}
+
+  create_release:
+    name: Create Release
+    needs: [check, build_legacy, build_csharp_amd64, build_csharp_arm64]
+    if: |
+      always() && (
+        (needs.check.outputs.legacy_is_new == 'true' && needs.build_legacy.result == 'success') ||
+        (needs.check.outputs.csharp_is_new == 'true' && needs.build_csharp_amd64.result == 'success' && needs.build_csharp_arm64.result == 'success')
+      )
+    uses: ./.github/workflows/create-release.yml
+    with:
+      version: ${{ needs.check.outputs.legacy_is_new == 'true' && needs.check.outputs.legacy_version || needs.check.outputs.csharp_version }}

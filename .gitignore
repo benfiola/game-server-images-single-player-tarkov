@@ -1,0 +1,7 @@
+dist/
+*.log
+.env
+.env.local
+node_modules/
+.vscode
+!.vscode/launch.template.json
