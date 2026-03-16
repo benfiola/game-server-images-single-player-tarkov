@@ -1,0 +1,200 @@
+name: Build SPT
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g., v3.9.5 or v4.0.0)'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to build'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  determine-build-type:
+    name: Determine Build Type
+    runs-on: ubuntu-latest
+    outputs:
+      build_type: ${{ steps.parse.outputs.build_type }}
+    steps:
+      - name: Parse version and determine build type
+        id: parse
+        run: |
+          VERSION="${{ inputs.version }}"
+
+          # Validate version format
+          if ! [[ $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version format: $VERSION"
+            exit 1
+          fi
+
+          # Extract major version
+          MAJOR=$(echo $VERSION | sed 's/v\([0-9]*\).*/\1/')
+
+          if [ "$MAJOR" -lt 4 ]; then
+            echo "build_type=legacy" >> $GITHUB_OUTPUT
+            echo "Version $VERSION is legacy (< 4.0.0)"
+          else
+            echo "build_type=modern" >> $GITHUB_OUTPUT
+            echo "Version $VERSION is modern (>= 4.0.0)"
+          fi
+
+  build-legacy:
+    name: Build Legacy ${{ inputs.version }}
+    needs: determine-build-type
+    if: needs.determine-build-type.outputs.build_type == 'legacy'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout build scripts
+        uses: actions/checkout@v4
+        with:
+          path: build-repo
+          fetch-depth: 1
+
+      - name: Clone SPT server repository
+        run: |
+          git clone --depth 1 --branch ${{ inputs.version }} \
+            https://github.com/sp-tarkov/server.git spt-repo
+
+      - name: Prepare build environment
+        run: |
+          mkdir -p build-output
+          mkdir -p build-temp
+
+      - name: Build legacy SPT
+        run: |
+          bash build-repo/scripts/build-legacy.sh \
+            "$(pwd)/spt-repo" \
+            "${{ inputs.version }}" \
+            "$(pwd)/build-output"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spt-${{ inputs.version }}-legacy
+          path: build-output/
+          retention-days: 30
+          compression-level: 0
+
+  build-csharp-amd64:
+    name: Build C# amd64 ${{ inputs.version }}
+    needs: determine-build-type
+    if: needs.determine-build-type.outputs.build_type == 'modern'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout build scripts
+        uses: actions/checkout@v4
+        with:
+          path: build-repo
+          fetch-depth: 1
+
+      - name: Clone SPT server-csharp repository
+        run: |
+          git clone --depth 1 --branch ${{ inputs.version }} \
+            https://github.com/sp-tarkov/server-csharp.git spt-repo
+
+      - name: Prepare build environment
+        run: |
+          mkdir -p build-output
+          mkdir -p build-temp
+
+      - name: Build modern C# (amd64)
+        run: |
+          bash build-repo/scripts/build-csharp-amd64.sh \
+            "$(pwd)/spt-repo" \
+            "${{ inputs.version }}" \
+            "$(pwd)/build-output"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spt-${{ inputs.version }}-amd64
+          path: build-output/
+          retention-days: 30
+          compression-level: 0
+
+  build-csharp-arm64:
+    name: Build C# arm64 ${{ inputs.version }}
+    needs: determine-build-type
+    if: needs.determine-build-type.outputs.build_type == 'modern'
+    runs-on: ubuntu-24.04-arm64
+    steps:
+      - name: Checkout build scripts
+        uses: actions/checkout@v4
+        with:
+          path: build-repo
+          fetch-depth: 1
+
+      - name: Clone SPT server-csharp repository
+        run: |
+          git clone --depth 1 --branch ${{ inputs.version }} \
+            https://github.com/sp-tarkov/server-csharp.git spt-repo
+
+      - name: Prepare build environment
+        run: |
+          mkdir -p build-output
+          mkdir -p build-temp
+
+      - name: Build modern C# (arm64)
+        run: |
+          bash build-repo/scripts/build-csharp-arm64.sh \
+            "$(pwd)/spt-repo" \
+            "${{ inputs.version }}" \
+            "$(pwd)/build-output"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spt-${{ inputs.version }}-arm64
+          path: build-output/
+          retention-days: 30
+          compression-level: 0
+
+  dispatch-release:
+    name: Dispatch Release Workflow
+    needs: [determine-build-type, build-legacy, build-csharp-amd64, build-csharp-arm64]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Check if builds succeeded
+        run: |
+          BUILD_TYPE="${{ needs.determine-build-type.outputs.build_type }}"
+
+          if [ "$BUILD_TYPE" = "legacy" ]; then
+            if [ "${{ needs.build-legacy.result }}" != "success" ]; then
+              echo "Legacy build failed"
+              exit 1
+            fi
+          else
+            if [ "${{ needs.build-csharp-amd64.result }}" != "success" ]; then
+              echo "C# amd64 build failed"
+              exit 1
+            fi
+            if [ "${{ needs.build-csharp-arm64.result }}" != "success" ]; then
+              echo "C# arm64 build failed"
+              exit 1
+            fi
+          fi
+
+      - name: Dispatch create-release workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'create-release.yml',
+              ref: 'main',
+              inputs: {
+                version: '${{ inputs.version }}'
+              }
+            })

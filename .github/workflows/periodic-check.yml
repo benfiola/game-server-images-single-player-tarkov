@@ -86,34 +86,14 @@ jobs:
     name: Trigger Legacy Build
     needs: check
     if: needs.check.outputs.legacy_is_new == 'true'
-    uses: ./.github/workflows/build-legacy.yml
+    uses: ./.github/workflows/build.yml
     with:
       version: ${{ needs.check.outputs.legacy_version }}
 
-  build_csharp_amd64:
-    name: Trigger C# amd64 Build
+  build_csharp:
+    name: Trigger C# Build
     needs: check
     if: needs.check.outputs.csharp_is_new == 'true'
-    uses: ./.github/workflows/build-csharp-amd64.yml
+    uses: ./.github/workflows/build.yml
     with:
       version: ${{ needs.check.outputs.csharp_version }}
-
-  build_csharp_arm64:
-    name: Trigger C# arm64 Build
-    needs: check
-    if: needs.check.outputs.csharp_is_new == 'true'
-    uses: ./.github/workflows/build-csharp-arm64.yml
-    with:
-      version: ${{ needs.check.outputs.csharp_version }}
-
-  create_release:
-    name: Create Release
-    needs: [check, build_legacy, build_csharp_amd64, build_csharp_arm64]
-    if: |
-      always() && (
-        (needs.check.outputs.legacy_is_new == 'true' && needs.build_legacy.result == 'success') ||
-        (needs.check.outputs.csharp_is_new == 'true' && needs.build_csharp_amd64.result == 'success' && needs.build_csharp_arm64.result == 'success')
-      )
-    uses: ./.github/workflows/create-release.yml
-    with:
-      version: ${{ needs.check.outputs.legacy_is_new == 'true' && needs.check.outputs.legacy_version || needs.check.outputs.csharp_version }}
