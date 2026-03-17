@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -111,6 +112,27 @@ func getLatestTag(ctx context.Context, client *github.Client, repo string) (*Ver
 	return latestVersion, nil
 }
 
+func versionAlreadyReleased(ctx context.Context, client *github.Client, version string) (bool, error) {
+	// Get the current repository from environment (GitHub Actions provides this)
+	repo := strings.TrimPrefix(os.Getenv("GITHUB_REPOSITORY"), "")
+	if repo == "" {
+		return false, fmt.Errorf("GITHUB_REPOSITORY environment variable not set")
+	}
+
+	parts := strings.Split(repo, "/")
+	owner := parts[0]
+	name := parts[1]
+
+	_, resp, err := client.Repositories.GetReleaseByTag(ctx, owner, name, version)
+	if err != nil && resp.StatusCode == 404 {
+		return false, nil // Release doesn't exist
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil // Release exists
+}
+
 func checkVersions(ctx context.Context, client *github.Client) error {
 	legacyVersion, err := getLatestTag(ctx, client, RepoLegacy)
 	if err != nil {
@@ -122,15 +144,31 @@ func checkVersions(ctx context.Context, client *github.Client) error {
 		log.Printf("warning: failed to get csharp version: %v", err)
 	}
 
-	output := map[string]string{}
+	var versionsToBuild []string
+
 	if legacyVersion != nil {
-		output["legacy"] = legacyVersion.String()
-	}
-	if csharpVersion != nil {
-		output["csharp"] = csharpVersion.String()
+		versionStr := legacyVersion.String()
+		released, err := versionAlreadyReleased(ctx, client, versionStr)
+		if err != nil {
+			log.Printf("warning: failed to check if %s is released: %v", versionStr, err)
+		}
+		if !released {
+			versionsToBuild = append(versionsToBuild, versionStr)
+		}
 	}
 
-	jsonBytes, err := json.Marshal(output)
+	if csharpVersion != nil {
+		versionStr := csharpVersion.String()
+		released, err := versionAlreadyReleased(ctx, client, versionStr)
+		if err != nil {
+			log.Printf("warning: failed to check if %s is released: %v", versionStr, err)
+		}
+		if !released {
+			versionsToBuild = append(versionsToBuild, versionStr)
+		}
+	}
+
+	jsonBytes, err := json.Marshal(versionsToBuild)
 	if err != nil {
 		return fmt.Errorf("failed to marshal JSON: %w", err)
 	}

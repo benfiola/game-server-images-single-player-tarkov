@@ -14,10 +14,7 @@ jobs:
     name: Check for new versions
     runs-on: ubuntu-latest
     outputs:
-      legacy_version: ${{ steps.check.outputs.legacy_version }}
-      csharp_version: ${{ steps.check.outputs.csharp_version }}
-      legacy_is_new: ${{ steps.check_legacy.outputs.is_new }}
-      csharp_is_new: ${{ steps.check_csharp.outputs.is_new }}
+      versions_to_build: ${{ steps.check.outputs.versions_to_build }}
     steps:
       - uses: actions/checkout@v4
 
@@ -25,75 +22,20 @@ jobs:
         with:
           go-version: "1.25"
 
-      - name: Check latest versions
+      - name: Check latest versions and which need building
         id: check
         run: |
           OUTPUT=$(go run check-versions.go)
-          echo "Full output: $OUTPUT"
+          echo "versions_to_build=$OUTPUT" >> $GITHUB_OUTPUT
+          echo "Versions to build: $OUTPUT"
 
-          # Parse JSON output
-          LEGACY=$(echo "$OUTPUT" | jq -r '.legacy // empty')
-          CSHARP=$(echo "$OUTPUT" | jq -r '.csharp // empty')
-
-          echo "legacy_version=$LEGACY" >> $GITHUB_OUTPUT
-          echo "csharp_version=$CSHARP" >> $GITHUB_OUTPUT
-
-          echo "Parsed versions:"
-          echo "  Legacy: $LEGACY"
-          echo "  C#: $CSHARP"
-
-      - name: Check if legacy version is new
-        id: check_legacy
-        if: steps.check.outputs.legacy_version != ''
-        env:
-          VERSION: ${{ steps.check.outputs.legacy_version }}
-        run: |
-          # Check if release exists
-          if gh release view "$VERSION" --repo "${{ github.repository }}" &>/dev/null; then
-            echo "Release already exists for $VERSION"
-            echo "is_new=false" >> $GITHUB_OUTPUT
-          else
-            echo "New version detected: $VERSION"
-            echo "is_new=true" >> $GITHUB_OUTPUT
-          fi
-        continue-on-error: true
-
-      - name: Check if csharp version is new
-        id: check_csharp
-        if: steps.check.outputs.csharp_version != ''
-        env:
-          VERSION: ${{ steps.check.outputs.csharp_version }}
-        run: |
-          # Check if release exists
-          if gh release view "$VERSION" --repo "${{ github.repository }}" &>/dev/null; then
-            echo "Release already exists for $VERSION"
-            echo "is_new=false" >> $GITHUB_OUTPUT
-          else
-            echo "New version detected: $VERSION"
-            echo "is_new=true" >> $GITHUB_OUTPUT
-          fi
-        continue-on-error: true
-
-      - name: Log summary
-        run: |
-          echo "=== Version Check Summary ==="
-          echo "Legacy version: ${{ steps.check.outputs.legacy_version }}"
-          echo "  New: ${{ steps.check_legacy.outputs.is_new }}"
-          echo "C# version: ${{ steps.check.outputs.csharp_version }}"
-          echo "  New: ${{ steps.check_csharp.outputs.is_new }}"
-
-  build_legacy:
-    name: Trigger Legacy Build and Release
+  build:
+    name: Build and Release ${{ matrix.version }}
     needs: check
-    if: needs.check.outputs.legacy_is_new == 'true'
+    if: needs.check.outputs.versions_to_build != '[]'
+    strategy:
+      matrix:
+        version: ${{ fromJson(needs.check.outputs.versions_to_build) }}
     uses: ./.github/workflows/build-and-release.yml
     with:
-      version: ${{ needs.check.outputs.legacy_version }}
-
-  build_csharp:
-    name: Trigger C# Build and Release
-    needs: check
-    if: needs.check.outputs.csharp_is_new == 'true'
-    uses: ./.github/workflows/build-and-release.yml
-    with:
-      version: ${{ needs.check.outputs.csharp_version }}
+      version: ${{ matrix.version }}

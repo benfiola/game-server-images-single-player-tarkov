@@ -78,7 +78,7 @@ jobs:
 
       - name: Build legacy SPT
         run: |
-          bash build-repo/scripts/build-legacy.sh \
+          bash build-repo/build-legacy.sh \
             "${{ inputs.version }}" \
             "spt-${{ inputs.version }}.tar.gz"
 
@@ -107,7 +107,7 @@ jobs:
 
       - name: Build modern C# (amd64)
         run: |
-          bash build-repo/scripts/build-csharp.sh \
+          bash build-repo/build-csharp.sh \
             "${{ inputs.version }}" \
             "amd64" \
             "spt-${{ inputs.version }}-amd64.tar.gz"
@@ -137,7 +137,7 @@ jobs:
 
       - name: Build modern C# (arm64)
         run: |
-          bash build-repo/scripts/build-csharp.sh \
+          bash build-repo/build-csharp.sh \
             "${{ inputs.version }}" \
             "arm64" \
             "spt-${{ inputs.version }}-arm64.tar.gz"
