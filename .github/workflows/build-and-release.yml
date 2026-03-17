@@ -1,21 +1,22 @@
-name: Build SPT
+name: Build and Release SPT
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to build (e.g., 3.9.5 or 4.0.0)"
+        description: "Version to build and release (e.g., 3.9.5 or 4.0.0)"
         required: true
         type: string
   workflow_call:
     inputs:
       version:
-        description: "Version to build"
+        description: "Version to build and release"
         required: true
         type: string
 
 permissions:
-  contents: read
+  contents: write
+  actions: write
 
 jobs:
   determine-build-type:
@@ -23,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       build_type: ${{ steps.parse.outputs.build_type }}
+      type: ${{ steps.parse.outputs.type }}
     steps:
       - name: Parse version and determine build type
         id: parse
@@ -40,9 +42,11 @@ jobs:
 
           if [ "$MAJOR" -lt 4 ]; then
             echo "build_type=legacy" >> $GITHUB_OUTPUT
+            echo "type=legacy" >> $GITHUB_OUTPUT
             echo "Version $VERSION is legacy (< 4.0.0)"
           else
             echo "build_type=modern" >> $GITHUB_OUTPUT
+            echo "type=modern" >> $GITHUB_OUTPUT
             echo "Version $VERSION is modern (>= 4.0.0)"
           fi
 
@@ -150,8 +154,8 @@ jobs:
           retention-days: 30
           compression-level: 0
 
-  dispatch-release:
-    name: Dispatch Release Workflow
+  release:
+    name: Create Release ${{ inputs.version }}
     needs:
       [
         determine-build-type,
@@ -161,10 +165,8 @@ jobs:
       ]
     if: always()
     runs-on: ubuntu-latest
-    permissions:
-      actions: write
     steps:
-      - name: Check if builds succeeded
+      - name: Validate builds succeeded
         run: |
           BUILD_TYPE="${{ needs.determine-build-type.outputs.build_type }}"
 
@@ -184,16 +186,17 @@ jobs:
             fi
           fi
 
-      - name: Dispatch create-release workflow
-        uses: actions/github-script@v7
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
         with:
-          script: |
-            github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'create-release.yml',
-              ref: 'main',
-              inputs: {
-                version: '${{ inputs.version }}'
-              }
-            })
+          pattern: spt-*
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ inputs.version }}
+          name: Single Player Tarkov ${{ inputs.version }}
+          files: artifacts/**/*
+          draft: false
+          prerelease: false

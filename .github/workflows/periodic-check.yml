@@ -83,17 +83,17 @@ jobs:
           echo "  New: ${{ steps.check_csharp.outputs.is_new }}"
 
   build_legacy:
-    name: Trigger Legacy Build
+    name: Trigger Legacy Build and Release
     needs: check
     if: needs.check.outputs.legacy_is_new == 'true'
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/build-and-release.yml
     with:
       version: ${{ needs.check.outputs.legacy_version }}
 
   build_csharp:
-    name: Trigger C# Build
+    name: Trigger C# Build and Release
     needs: check
     if: needs.check.outputs.csharp_is_new == 'true'
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/build-and-release.yml
     with:
       version: ${{ needs.check.outputs.csharp_version }}
