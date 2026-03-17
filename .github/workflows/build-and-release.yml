@@ -102,6 +102,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
+          sudo add-apt-repository ppa:dotnet/backports
           sudo apt-get update
           sudo apt-get install -y git git-lfs dotnet-sdk-9.0
 
@@ -132,6 +133,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
+          sudo add-apt-repository ppa:dotnet/backports
           sudo apt-get update
           sudo apt-get install -y git git-lfs dotnet-sdk-9.0
 
@@ -159,9 +161,6 @@ jobs:
       ]
     if: always()
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      actions: write
     steps:
       - name: Validate builds succeeded
         run: |
