@@ -40,6 +40,8 @@ jobs:
         version: ${{ fromJson(needs.check.outputs.versions_to_build) }}
     runs-on: ubuntu-latest
     steps:
+      # checkout might be needed to allow gh CLI to work
+      - uses: actions/checkout@v4
       - name: Trigger build-and-release workflow
         run: |
           gh workflow run build-and-release.yml \
