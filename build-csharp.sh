@@ -43,7 +43,7 @@ dotnet publish "$TEMP_DIR/SPTarkov.Server/SPTarkov.Server.csproj" \
     -o "$BUILD_DIR" \
     --self-contained false \
     -p:IncludeNativeLibrariesForSelfExtract=true \
-    -p:SptBuildType=Release \
+    -p:SptBuildType=RELEASE \
     -p:SptVersion="$VERSION" \
     -p:SptBuildTime="$BUILD_TIME" \
     -p:SptCommit="$COMMIT" \
