@@ -28,7 +28,7 @@ jobs:
       - name: Check latest versions
         id: check
         run: |
-          OUTPUT=$(go run build.go check)
+          OUTPUT=$(go run check-versions.go)
           echo "Full output: $OUTPUT"
 
           # Parse JSON output

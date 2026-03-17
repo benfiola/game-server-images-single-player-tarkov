@@ -3,10 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -144,24 +142,8 @@ func checkVersions(ctx context.Context, client *github.Client) error {
 func main() {
 	ctx := context.Background()
 
-	checkCmd := flag.NewFlagSet("check", flag.ExitOnError)
-
-	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "usage: %s check\n", os.Args[0])
-		os.Exit(1)
-	}
-
-	switch os.Args[1] {
-	case "check":
-		checkCmd.Parse(os.Args[2:])
-
-		client := github.NewClient(nil)
-		if err := checkVersions(ctx, client); err != nil {
-			log.Fatal(err)
-		}
-
-	default:
-		fmt.Fprintf(os.Stderr, "unknown command: %s (only 'check' is supported)\n", os.Args[1])
-		os.Exit(1)
+	client := github.NewClient(nil)
+	if err := checkVersions(ctx, client); err != nil {
+		log.Fatal(err)
 	}
 }
