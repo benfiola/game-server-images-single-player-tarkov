@@ -47,7 +47,7 @@ jobs:
           fi
 
   build-legacy:
-    name: Build Legacy (${{ inputs.version | default('skipped') }})
+    name: Build Legacy (${{ inputs.version || "skipped" }})
     needs: determine-build-type
     if: needs.determine-build-type.outputs.build_type == 'legacy'
     runs-on: ubuntu-24.04
@@ -87,7 +87,7 @@ jobs:
           compression-level: 0
 
   build-csharp-amd64:
-    name: Build C# amd64 (${{ inputs.version | default('skipped') }})
+    name: Build C# amd64 (${{ inputs.version || "skipped" }})
     needs: determine-build-type
     if: needs.determine-build-type.outputs.build_type == 'modern'
     runs-on: ubuntu-24.04
@@ -119,7 +119,7 @@ jobs:
           compression-level: 0
 
   build-csharp-arm64:
-    name: Build C# arm64 (${{ inputs.version | default('skipped') }})
+    name: Build C# arm64 (${{ inputs.version || "skipped" }})
     needs: determine-build-type
     if: needs.determine-build-type.outputs.build_type == 'modern'
     runs-on: ubuntu-24.04-arm
