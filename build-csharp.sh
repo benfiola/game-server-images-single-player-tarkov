@@ -4,22 +4,23 @@
 #
 # Dependencies: git, git-lfs, dotnet-sdk (9.0+)
 #
-# Usage: ./build-csharp.sh <VERSION> <ARCH> <OUTPUT_DIR>
+# Usage: ./build-csharp.sh <VERSION> <ARCH> <OUTPUT_ARCHIVE>
 
 set -e
 
 VERSION="$1"
 ARCH="$2"
-OUTPUT_DIR="$3"
+OUTPUT_ARCHIVE="$3"
 
-if [[ -z "$VERSION" || -z "$ARCH" || -z "$OUTPUT_DIR" ]]; then
-    echo "Usage: $0 <VERSION> <ARCH> <OUTPUT_DIR>"
+if [[ -z "$VERSION" || -z "$ARCH" || -z "$OUTPUT_ARCHIVE" ]]; then
+    echo "Usage: $0 <VERSION> <ARCH> <OUTPUT_ARCHIVE>"
     exit 1
 fi
 
-# Create temporary directory for source checkout
+# Create temporary directories
 TEMP_DIR=$(mktemp -d)
-trap "rm -rf '$TEMP_DIR'" EXIT
+BUILD_DIR=$(mktemp -d)
+trap "rm -rf '$TEMP_DIR' '$BUILD_DIR'" EXIT
 
 echo "[csharp-$ARCH] Cloning SPT server-csharp repository (version $VERSION)..."
 git clone --depth 1 --branch "$VERSION" \
@@ -31,13 +32,31 @@ git -C "$TEMP_DIR" lfs install
 echo "[csharp-$ARCH] Pulling LFS assets..."
 git -C "$TEMP_DIR" lfs pull
 
-echo "[csharp-$ARCH] Publishing for linux-$ARCH..."
+# Extract version number and git commit info
+COMMIT=$(git -C "$TEMP_DIR" rev-parse --short HEAD)
+BUILD_TIME=$(date +%Y%m%d)
+
+echo "[csharp-$ARCH] Building for linux-$ARCH (version: $VERSION, commit: $COMMIT, date: $BUILD_TIME)..."
 dotnet publish "$TEMP_DIR/SPTarkov.Server/SPTarkov.Server.csproj" \
     -c Release \
     -r "linux-$ARCH" \
-    -o "$OUTPUT_DIR"
+    -o "$BUILD_DIR" \
+    --self-contained false \
+    -p:IncludeNativeLibrariesForSelfExtract=true \
+    -p:SptBuildType=Release \
+    -p:SptVersion="$VERSION" \
+    -p:SptBuildTime="$BUILD_TIME" \
+    -p:SptCommit="$COMMIT" \
+    -p:IsPublish=true \
+    -p:LangVersion=preview
 
 echo "[csharp-$ARCH] Cleaning up debug symbols..."
-find "$OUTPUT_DIR" -name "*.pdb" -delete
+find "$BUILD_DIR" -name "*.pdb" -delete
 
-echo "[csharp-$ARCH] Build completed: $OUTPUT_DIR"
+echo "[csharp-$ARCH] Creating output directory for archive..."
+mkdir -p "$(dirname "$OUTPUT_ARCHIVE")"
+
+echo "[csharp-$ARCH] Creating tar.gz archive..."
+tar -C "$BUILD_DIR" -czf "$OUTPUT_ARCHIVE" .
+
+echo "[csharp-$ARCH] Build completed: $OUTPUT_ARCHIVE"
