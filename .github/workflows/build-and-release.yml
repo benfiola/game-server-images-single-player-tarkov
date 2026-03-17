@@ -1,4 +1,4 @@
-name: Build and Release SPT  (${{ github.event.inputs.version }})
+name: Build and Release SPT
 
 on:
   workflow_dispatch:
