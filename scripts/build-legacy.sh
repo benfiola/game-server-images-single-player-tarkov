@@ -3,15 +3,15 @@
 #
 # Dependencies: git, git-lfs, nodejs, npm
 #
-# Usage: ./build-legacy.sh <VERSION> <OUTPUT_DIR>
+# Usage: ./build-legacy.sh <VERSION> <OUTPUT_ARCHIVE>
 
 set -e
 
 VERSION="$1"
-OUTPUT_DIR="$2"
+OUTPUT_ARCHIVE="$2"
 
-if [[ -z "$VERSION" || -z "$OUTPUT_DIR" ]]; then
-    echo "Usage: $0 <VERSION> <OUTPUT_DIR>"
+if [[ -z "$VERSION" || -z "$OUTPUT_ARCHIVE" ]]; then
+    echo "Usage: $0 <VERSION> <OUTPUT_ARCHIVE>"
     exit 1
 fi
 
@@ -35,10 +35,10 @@ npm -C "$TEMP_DIR/project" install
 echo "[legacy] Building release..."
 npm -C "$TEMP_DIR/project" run build:release
 
-echo "[legacy] Creating output directory..."
-mkdir -p "$OUTPUT_DIR"
+echo "[legacy] Creating output directory for archive..."
+mkdir -p "$(dirname "$OUTPUT_ARCHIVE")"
 
-echo "[legacy] Copying artifacts..."
-cp -r "$TEMP_DIR/project/build/." "$OUTPUT_DIR"
+echo "[legacy] Creating tar.gz archive..."
+tar -C "$TEMP_DIR/project/build" -czf "$OUTPUT_ARCHIVE" .
 
-echo "[legacy] Build completed: $OUTPUT_DIR"
+echo "[legacy] Build completed: $OUTPUT_ARCHIVE"

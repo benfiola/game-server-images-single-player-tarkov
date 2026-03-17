@@ -80,15 +80,13 @@ jobs:
         run: |
           bash build-repo/scripts/build-legacy.sh \
             "${{ inputs.version }}" \
-            "$(pwd)/build-output"
+            "spt-${{ inputs.version }}.tar.gz"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: spt-${{ inputs.version }}-legacy
-          path: build-output/
-          retention-days: 30
-          compression-level: 0
+          name: spt-${{ inputs.version }}
+          path: spt-${{ inputs.version }}.tar.gz
 
   build-csharp-amd64:
     name: Build C# amd64 (${{ inputs.version }})
@@ -112,15 +110,13 @@ jobs:
           bash build-repo/scripts/build-csharp.sh \
             "${{ inputs.version }}" \
             "amd64" \
-            "$(pwd)/build-output"
+            "spt-${{ inputs.version }}-amd64.tar.gz"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: spt-${{ inputs.version }}-amd64
-          path: build-output/
-          retention-days: 30
-          compression-level: 0
+          path: spt-${{ inputs.version }}-amd64.tar.gz
 
   build-csharp-arm64:
     name: Build C# arm64 (${{ inputs.version }})
@@ -144,15 +140,13 @@ jobs:
           bash build-repo/scripts/build-csharp.sh \
             "${{ inputs.version }}" \
             "arm64" \
-            "$(pwd)/build-output"
+            "spt-${{ inputs.version }}-arm64.tar.gz"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: spt-${{ inputs.version }}-arm64
-          path: build-output/
-          retention-days: 30
-          compression-level: 0
+          path: spt-${{ inputs.version }}-arm64.tar.gz
 
   release:
     name: Create Release ${{ inputs.version }}
@@ -196,7 +190,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ inputs.version }}
-          name: Single Player Tarkov ${{ inputs.version }}
+          name: ${{ inputs.version }}
           files: artifacts/**/*
           draft: false
           prerelease: false
