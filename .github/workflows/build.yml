@@ -50,7 +50,7 @@ jobs:
     name: Build Legacy ${{ inputs.version }}
     needs: determine-build-type
     if: needs.determine-build-type.outputs.build_type == 'legacy'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout build scripts
         uses: actions/checkout@v4
@@ -90,7 +90,7 @@ jobs:
     name: Build C# amd64 ${{ inputs.version }}
     needs: determine-build-type
     if: needs.determine-build-type.outputs.build_type == 'modern'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout build scripts
         uses: actions/checkout@v4
@@ -101,16 +101,13 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y git curl p7zip-full
-
-      - name: Prepare build environment
-        run: |
-          mkdir -p build-output
+          sudo apt-get install -y git git-lfs dotnet-sdk-9.0
 
       - name: Build modern C# (amd64)
         run: |
-          bash build-repo/scripts/build-csharp-amd64.sh \
+          bash build-repo/scripts/build-csharp.sh \
             "${{ inputs.version }}" \
+            "amd64" \
             "$(pwd)/build-output"
 
       - name: Upload artifact
@@ -125,7 +122,7 @@ jobs:
     name: Build C# arm64 ${{ inputs.version }}
     needs: determine-build-type
     if: needs.determine-build-type.outputs.build_type == 'modern'
-    runs-on: ubuntu-24.04-arm64
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout build scripts
         uses: actions/checkout@v4
@@ -138,14 +135,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y git git-lfs dotnet-sdk-9.0
 
-      - name: Prepare build environment
-        run: |
-          mkdir -p build-output
-
       - name: Build modern C# (arm64)
         run: |
-          bash build-repo/scripts/build-csharp-arm64.sh \
+          bash build-repo/scripts/build-csharp.sh \
             "${{ inputs.version }}" \
+            "arm64" \
             "$(pwd)/build-output"
 
       - name: Upload artifact
