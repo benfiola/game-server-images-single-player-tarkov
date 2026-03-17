@@ -38,11 +38,7 @@ npm -C "$TEMP_DIR/project" run build:release
 echo "[legacy] Creating output directory..."
 mkdir -p "$OUTPUT_DIR"
 
-echo "debug"
-ls -al $TEMP_DIR
-ls -al $TEMP_DIR/project
-
 echo "[legacy] Copying artifacts..."
-cp -r "$TEMP_DIR/project/dist/." "$OUTPUT_DIR"
+cp -r "$TEMP_DIR/project/build/." "$OUTPUT_DIR"
 
 echo "[legacy] Build completed: $OUTPUT_DIR"
