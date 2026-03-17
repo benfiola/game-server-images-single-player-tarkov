@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	RepoLegacy = "sp-tarkov/server"
+	RepoNodeJS = "sp-tarkov/server"
 	RepoCSharp = "sp-tarkov/server-csharp"
 )
 
@@ -54,7 +54,7 @@ func (v *Version) Repo() string {
 	if v.major >= 4 {
 		return RepoCSharp
 	}
-	return RepoLegacy
+	return RepoNodeJS
 }
 
 func (v *Version) IsCSharp() bool {
@@ -134,9 +134,9 @@ func versionAlreadyReleased(ctx context.Context, client *github.Client, version 
 }
 
 func checkVersions(ctx context.Context, client *github.Client) error {
-	legacyVersion, err := getLatestTag(ctx, client, RepoLegacy)
+	nodejsVersion, err := getLatestTag(ctx, client, RepoNodeJS)
 	if err != nil {
-		log.Printf("warning: failed to get legacy version: %v", err)
+		log.Printf("warning: failed to get nodejs version: %v", err)
 	}
 
 	csharpVersion, err := getLatestTag(ctx, client, RepoCSharp)
@@ -146,8 +146,8 @@ func checkVersions(ctx context.Context, client *github.Client) error {
 
 	var versionsToBuild []string
 
-	if legacyVersion != nil {
-		versionStr := legacyVersion.String()
+	if nodejsVersion != nil {
+		versionStr := nodejsVersion.String()
 		released, err := versionAlreadyReleased(ctx, client, versionStr)
 		if err != nil {
 			log.Printf("warning: failed to check if %s is released: %v", versionStr, err)

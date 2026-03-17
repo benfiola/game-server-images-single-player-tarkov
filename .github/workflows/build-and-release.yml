@@ -24,7 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       build_type: ${{ steps.parse.outputs.build_type }}
-      type: ${{ steps.parse.outputs.type }}
     steps:
       - name: Parse version and determine build type
         id: parse
@@ -41,19 +40,17 @@ jobs:
           MAJOR=$(echo $VERSION | sed 's/\([0-9]*\).*/\1/')
 
           if [ "$MAJOR" -lt 4 ]; then
-            echo "build_type=legacy" >> $GITHUB_OUTPUT
-            echo "type=legacy" >> $GITHUB_OUTPUT
-            echo "Version $VERSION is legacy (< 4.0.0)"
+            echo "build_type=nodejs" >> $GITHUB_OUTPUT
+            echo "Version $VERSION is nodejs (< 4.0.0)"
           else
-            echo "build_type=modern" >> $GITHUB_OUTPUT
-            echo "type=modern" >> $GITHUB_OUTPUT
-            echo "Version $VERSION is modern (>= 4.0.0)"
+            echo "build_type=csharp" >> $GITHUB_OUTPUT
+            echo "Version $VERSION is csharp (>= 4.0.0)"
           fi
 
-  build-legacy:
-    name: Build Legacy (${{ inputs.version }})
+  build-nodejs:
+    name: Build NodeJS (${{ inputs.version }})
     needs: determine-build-type
-    if: needs.determine-build-type.outputs.build_type == 'legacy'
+    if: needs.determine-build-type.outputs.build_type == 'nodejs'
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout build scripts
@@ -76,9 +73,9 @@ jobs:
         run: |
           mkdir -p build-output
 
-      - name: Build legacy SPT
+      - name: Build nodejs SPT
         run: |
-          bash build-repo/build-legacy.sh \
+          bash build-repo/build-nodejs.sh \
             "${{ inputs.version }}" \
             "spt-${{ inputs.version }}.tar.gz"
 
@@ -91,7 +88,7 @@ jobs:
   build-csharp-amd64:
     name: Build C# amd64 (${{ inputs.version }})
     needs: determine-build-type
-    if: needs.determine-build-type.outputs.build_type == 'modern'
+    if: needs.determine-build-type.outputs.build_type == 'csharp'
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout build scripts
@@ -106,7 +103,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y git git-lfs dotnet-sdk-9.0
 
-      - name: Build modern C# (amd64)
+      - name: Build C# (amd64)
         run: |
           bash build-repo/build-csharp.sh \
             "${{ inputs.version }}" \
@@ -122,7 +119,7 @@ jobs:
   build-csharp-arm64:
     name: Build C# arm64 (${{ inputs.version }})
     needs: determine-build-type
-    if: needs.determine-build-type.outputs.build_type == 'modern'
+    if: needs.determine-build-type.outputs.build_type == 'csharp'
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout build scripts
@@ -137,7 +134,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y git git-lfs dotnet-sdk-9.0
 
-      - name: Build modern C# (arm64)
+      - name: Build C# (arm64)
         run: |
           bash build-repo/build-csharp.sh \
             "${{ inputs.version }}" \
@@ -155,7 +152,7 @@ jobs:
     needs:
       [
         determine-build-type,
-        build-legacy,
+        build-nodejs,
         build-csharp-amd64,
         build-csharp-arm64,
       ]
@@ -166,9 +163,9 @@ jobs:
         run: |
           BUILD_TYPE="${{ needs.determine-build-type.outputs.build_type }}"
 
-          if [ "$BUILD_TYPE" = "legacy" ]; then
-            if [ "${{ needs.build-legacy.result }}" != "success" ]; then
-              echo "Legacy build failed"
+          if [ "$BUILD_TYPE" = "nodejs" ]; then
+            if [ "${{ needs.build-nodejs.result }}" != "success" ]; then
+              echo "NodeJS build failed"
               exit 1
             fi
           else
