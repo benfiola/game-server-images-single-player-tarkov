@@ -34,11 +34,15 @@ jobs:
     needs: check
     if: needs.check.outputs.versions_to_build != '[]'
     permissions:
-      contents: write
       actions: write
     strategy:
       matrix:
         version: ${{ fromJson(needs.check.outputs.versions_to_build) }}
-    uses: ./.github/workflows/build-and-release.yml
-    with:
-      version: ${{ matrix.version }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger build-and-release workflow
+        run: |
+          gh workflow run build-and-release.yml \
+            -f version=${{ matrix.version }}
+        env:
+          GH_TOKEN: ${{ github.token }}
