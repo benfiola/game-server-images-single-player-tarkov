@@ -36,8 +36,6 @@ git -C "$TEMP_DIR" lfs pull
 COMMIT=$(git -C "$TEMP_DIR" rev-parse --short HEAD)
 BUILD_TIME=$(date +%Y%m%d)
 
-dotnet --version
-exit 1
 echo "[csharp-$ARCH] Building for linux-$ARCH (version: $VERSION, commit: $COMMIT, date: $BUILD_TIME)..."
 dotnet publish "$TEMP_DIR/SPTarkov.Server/SPTarkov.Server.csproj" \
     -c Release \
