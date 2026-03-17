@@ -2,20 +2,27 @@
 # Build script for SPT >= 4.0.0 on amd64 (C#/.NET-based)
 # Downloads pre-compiled binaries from GitHub releases
 #
-# Dependencies: git, git-lfs, curl, 7z (p7zip)
+# Dependencies: git, curl, 7z (p7zip)
 #
-# Usage: ./build-csharp-amd64.sh <TEMP_DIR> <VERSION> <OUTPUT_DIR>
+# Usage: ./build-csharp-amd64.sh <VERSION> <OUTPUT_DIR>
 
 set -e
 
-TEMP_DIR="$1"
-VERSION="$2"
-OUTPUT_DIR="$3"
+VERSION="$1"
+OUTPUT_DIR="$2"
 
-if [[ -z "$TEMP_DIR" || -z "$VERSION" || -z "$OUTPUT_DIR" ]]; then
-    echo "Usage: $0 <TEMP_DIR> <VERSION> <OUTPUT_DIR>"
+if [[ -z "$VERSION" || -z "$OUTPUT_DIR" ]]; then
+    echo "Usage: $0 <VERSION> <OUTPUT_DIR>"
     exit 1
 fi
+
+# Create temporary directory for source checkout
+TEMP_DIR=$(mktemp -d)
+trap "rm -rf '$TEMP_DIR'" EXIT
+
+echo "[csharp-amd64] Cloning SPT server-csharp repository (version $VERSION)..."
+git clone --depth 1 --branch "$VERSION" \
+    https://github.com/sp-tarkov/server-csharp.git "$TEMP_DIR"
 
 # Remove 'v' prefix if present
 VERSION_CLEAN="${VERSION#v}"

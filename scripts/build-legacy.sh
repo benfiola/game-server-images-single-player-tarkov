@@ -3,18 +3,25 @@
 #
 # Dependencies: git, git-lfs, nodejs, npm
 #
-# Usage: ./build-legacy.sh <TEMP_DIR> <VERSION> <OUTPUT_DIR>
+# Usage: ./build-legacy.sh <VERSION> <OUTPUT_DIR>
 
 set -e
 
-TEMP_DIR="$1"
-VERSION="$2"
-OUTPUT_DIR="$3"
+VERSION="$1"
+OUTPUT_DIR="$2"
 
-if [[ -z "$TEMP_DIR" || -z "$VERSION" || -z "$OUTPUT_DIR" ]]; then
-    echo "Usage: $0 <TEMP_DIR> <VERSION> <OUTPUT_DIR>"
+if [[ -z "$VERSION" || -z "$OUTPUT_DIR" ]]; then
+    echo "Usage: $0 <VERSION> <OUTPUT_DIR>"
     exit 1
 fi
+
+# Create temporary directory for source checkout
+TEMP_DIR=$(mktemp -d)
+trap "rm -rf '$TEMP_DIR'" EXIT
+
+echo "[legacy] Cloning SPT server repository (version $VERSION)..."
+git clone --depth 1 --branch "$VERSION" \
+    https://github.com/sp-tarkov/server.git "$TEMP_DIR"
 
 echo "[legacy] Installing git-lfs..."
 git -C "$TEMP_DIR" lfs install
@@ -23,15 +30,15 @@ echo "[legacy] Pulling LFS assets..."
 git -C "$TEMP_DIR" lfs pull
 
 echo "[legacy] Installing npm dependencies..."
-npm -C "$TEMP_DIR" install
+npm -C "$TEMP_DIR/project" install
 
 echo "[legacy] Building release..."
-npm -C "$TEMP_DIR" run build:release
+npm -C "$TEMP_DIR/project" run build:release
 
 echo "[legacy] Creating output directory..."
 mkdir -p "$OUTPUT_DIR"
 
 echo "[legacy] Copying artifacts..."
-cp -r "$TEMP_DIR/dist/." "$OUTPUT_DIR"
+cp -r "$TEMP_DIR/project/dist/." "$OUTPUT_DIR"
 
 echo "[legacy] Build completed: $OUTPUT_DIR"

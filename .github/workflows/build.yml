@@ -68,11 +68,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y git git-lfs
 
-      - name: Clone SPT server repository
-        run: |
-          git clone --depth 1 --branch ${{ inputs.version }} \
-            https://github.com/sp-tarkov/server.git spt-repo
-
       - name: Prepare build environment
         run: |
           mkdir -p build-output
@@ -80,7 +75,6 @@ jobs:
       - name: Build legacy SPT
         run: |
           bash build-repo/scripts/build-legacy.sh \
-            "$(pwd)/spt-repo" \
             "${{ inputs.version }}" \
             "$(pwd)/build-output"
 
@@ -107,12 +101,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y git git-lfs curl p7zip-full
-
-      - name: Clone SPT server-csharp repository
-        run: |
-          git clone --depth 1 --branch ${{ inputs.version }} \
-            https://github.com/sp-tarkov/server-csharp.git spt-repo
+          sudo apt-get install -y git curl p7zip-full
 
       - name: Prepare build environment
         run: |
@@ -121,7 +110,6 @@ jobs:
       - name: Build modern C# (amd64)
         run: |
           bash build-repo/scripts/build-csharp-amd64.sh \
-            "$(pwd)/spt-repo" \
             "${{ inputs.version }}" \
             "$(pwd)/build-output"
 
@@ -150,11 +138,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y git git-lfs dotnet-sdk-9.0
 
-      - name: Clone SPT server-csharp repository
-        run: |
-          git clone --depth 1 --branch ${{ inputs.version }} \
-            https://github.com/sp-tarkov/server-csharp.git spt-repo
-
       - name: Prepare build environment
         run: |
           mkdir -p build-output
@@ -162,7 +145,6 @@ jobs:
       - name: Build modern C# (arm64)
         run: |
           bash build-repo/scripts/build-csharp-arm64.sh \
-            "$(pwd)/spt-repo" \
             "${{ inputs.version }}" \
             "$(pwd)/build-output"
 
