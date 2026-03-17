@@ -14,10 +14,6 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: read
-  actions: write
-
 jobs:
   determine-build-type:
     name: Determine Build Type
@@ -164,6 +160,8 @@ jobs:
       ]
     if: always()
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Validate builds succeeded
         run: |
