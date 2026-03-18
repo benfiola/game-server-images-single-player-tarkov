@@ -85,7 +85,7 @@ jobs:
     name: Build NodeJS arm64 (${{ inputs.version }})
     needs: determine-build-type
     if: needs.determine-build-type.outputs.build_type == 'nodejs'
-    runs-on: ubuntu-24.04-arm64
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout build scripts
         uses: actions/checkout@v4
