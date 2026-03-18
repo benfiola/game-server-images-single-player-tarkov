@@ -34,12 +34,13 @@ jobs:
       actions: write
     strategy:
       matrix:
-        version: ${{ fromJson(needs.check.outputs.versions_to_build) }}
+        version: ${{ fromJson(needs.check.outputs.versions_to_build) || fromJson('[""]') }}
     runs-on: ubuntu-latest
     steps:
       # checkout might be needed to allow gh CLI to work
       - uses: actions/checkout@v4
       - name: Trigger build-and-release workflow
+        if: matrix.version != ''
         run: |
           gh workflow run build-and-release.yml \
             -f version=${{ matrix.version }}
