@@ -55,7 +55,7 @@ ls -al "$BUILD_DIR"
 # the linux-arm64 target creates the SPT.Server assembly
 # the linux-amd64 target creates the SPT.Server.Linux assembly
 # ensure that a consistent assembly is used (SPT.Server.Linux)
-if [ -f "$BUILD_DIR/SPT.Server" && ! -f "$BUILD_DIR/SPT.Server.Linux" ]; then
+if [ -f "$BUILD_DIR/SPT.Server" ] && [ ! -f "$BUILD_DIR/SPT.Server.Linux" ]; then
     echo "[csharp-$ARCH] Relocating SPT.Server to SPT.Server.Linux..."
     mv "$BUILD_DIR/SPT.Server" "$BUILD_DIR/SPT.Server.Linux"
 fi
