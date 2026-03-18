@@ -50,6 +50,8 @@ dotnet publish "$TEMP_DIR/SPTarkov.Server/SPTarkov.Server.csproj" \
     -p:IsPublish=true \
     -p:LangVersion=preview
 
+ls -al "$BUILD_DIR"
+
 # the linux-arm64 target creates the SPT.Server assembly
 # the linux-amd64 target creates the SPT.Server.Linux assembly
 # ensure that a consistent assembly is used (SPT.Server.Linux)
