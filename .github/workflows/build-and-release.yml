@@ -43,8 +43,8 @@ jobs:
             echo "Version $VERSION is csharp (>= 4.0.0)"
           fi
 
-  build-nodejs:
-    name: Build NodeJS (${{ inputs.version }})
+  build-nodejs-amd64:
+    name: Build NodeJS amd64 (${{ inputs.version }})
     needs: determine-build-type
     if: needs.determine-build-type.outputs.build_type == 'nodejs'
     runs-on: ubuntu-24.04
@@ -73,13 +73,51 @@ jobs:
         run: |
           bash build-repo/build-nodejs.sh \
             "${{ inputs.version }}" \
-            "spt-${{ inputs.version }}.tar.gz"
+            "spt-${{ inputs.version }}-amd64.tar.gz"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: spt-${{ inputs.version }}
-          path: spt-${{ inputs.version }}.tar.gz
+          name: spt-${{ inputs.version }}-amd64
+          path: spt-${{ inputs.version }}-amd64.tar.gz
+
+  build-nodejs-arm64:
+    name: Build NodeJS arm64 (${{ inputs.version }})
+    needs: determine-build-type
+    if: needs.determine-build-type.outputs.build_type == 'nodejs'
+    runs-on: ubuntu-24.04-arm64
+    steps:
+      - name: Checkout build scripts
+        uses: actions/checkout@v4
+        with:
+          path: build-repo
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git git-lfs
+
+      - name: Prepare build environment
+        run: |
+          mkdir -p build-output
+
+      - name: Build nodejs SPT
+        run: |
+          bash build-repo/build-nodejs.sh \
+            "${{ inputs.version }}" \
+            "spt-${{ inputs.version }}-arm64.tar.gz"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spt-${{ inputs.version }}-arm64
+          path: spt-${{ inputs.version }}-arm64.tar.gz
 
   build-csharp-amd64:
     name: Build C# amd64 (${{ inputs.version }})
@@ -154,7 +192,8 @@ jobs:
     needs:
       [
         determine-build-type,
-        build-nodejs,
+        build-nodejs-amd64,
+        build-nodejs-arm64,
         build-csharp-amd64,
         build-csharp-arm64,
       ]
@@ -168,8 +207,12 @@ jobs:
           BUILD_TYPE="${{ needs.determine-build-type.outputs.build_type }}"
 
           if [ "$BUILD_TYPE" = "nodejs" ]; then
-            if [ "${{ needs.build-nodejs.result }}" != "success" ]; then
-              echo "NodeJS build failed"
+            if [ "${{ needs.build-nodejs-amd64.result }}" != "success" ]; then
+              echo "NodeJS amd64 build failed"
+              exit 1
+            fi
+            if [ "${{ needs.build-nodejs-arm64.result }}" != "success" ]; then
+              echo "NodeJS arm64 build failed"
               exit 1
             fi
           else
